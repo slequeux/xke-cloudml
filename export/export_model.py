@@ -4,7 +4,7 @@ import tensorflow as tf
 from keras import backend as keras_backend
 from tensorflow.python.framework import graph_util
 
-from predict.local_inception import load_inception
+from predict.local import load_inception
 
 
 def add_base_64_decode_input_layers(model):

@@ -74,7 +74,7 @@ def export_inception_with_base64_decode():
 
             # save as SavedModel
             sess2.run(tf.global_variables_initializer())
-            b = tf.saved_model.builder.SavedModelBuilder('./models/v2')
+            b = tf.saved_model.builder.SavedModelBuilder('./models/pure_inception/')
             # b = tf.saved_model.builder.SavedModelBuilder('gs://{}/simple-mnist/v2'.format(BUCKET))
             b.add_meta_graph_and_variables(sess2,
                                            [tf.saved_model.tag_constants.SERVING],

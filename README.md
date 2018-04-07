@@ -22,6 +22,7 @@ Ce hands'on a été prévu pour être joué lors du XKE d'avril 2018 à Xebia.
 - Si vous souhaitez pouvoir réaliser l'entraînement en local, lancer la
   commande `python input/download_dataset.py` qui téléchargera un dataset d'entraînement.
   Cela requiert environ 5 Go d'espace disponible sur disque.
+- ```export PYTHONPATH=`pwd` ```
 
 Remarque : l'authentification de la CLI Gcloud avec la commande `gcloud auth application-default login` doit
 produire un fichier d'authentification dont vous devez conserver le chemin. Celui-ci sera utile
@@ -30,22 +31,21 @@ pendant l'exercice.
 # Prédictions avec InceptionV3 en local
 
 Vous demandez à Jean comment faire une prédiction sur votre poste pour commencer.
-Il vous indique de lancer la commande `python predict/local_inception.py --image /full/path/to/image` que vous vous empressez de lancer.
+Il vous indique de lancer la commande `python predict/local.py --image /full/path/to/image` que vous vous empressez de lancer.
 
 Vous devriez obtenir un résultat semblable à celui-ci :
 ```
 Predicted:
-Score 0.412874519825, Label candle
-Score 0.0934453085065, Label lipstick
-Score 0.0552788861096, Label face_powder
-Score 0.0318395756185, Label hair_spray
-Score 0.0220600552857, Label bottlecap
+Score 0.523641943932, Label orange
+Score 0.23567853868, Label lemon
+Score 0.0716699808836, Label Granny_Smith
+Score 0.0380598641932, Label banana
+Score 0.00295152305625, Label pineapple
 ```
 
 Allons donc faire un tour du côté du code. Vous remarquerez la complexité du modèle que Jean utilise :
 ```python
-def load_inception():
-    return InceptionV3(weights='imagenet')
+model = InceptionV3(weights='imagenet')
 ```
 
 En fait, Jean ne fait que charger un modèle fourni par défaut par Keras.
@@ -73,16 +73,47 @@ Les étapes ajoutées au graph réalisent cette opération.
 
 ## Effectuer une prédiction sur le modèle exporter
 
+Nous allons tester que le modèle répond toujours correctement.
+Pour cela, vous complétez le script `predict/local.py` et le lancez maintenant avec la commande `python predict/local.py --image data/fruits/apple/image_apple1.jpeg --model_path models/pure_inception --decode_preds_fn inception`
 
-TODO à rédiger
+La prédiction ainsi obtenue devrait être semblable au résultat précédent.
 
 # Prédiction dans le cloud
 
-TODO à rédiger
+Il est temps de déplacer le tout dans le cloud. Assez du travail en local, il faut maintenant publier ce modèle.
+
+## Déploiement du modèle
+
+La première étape sera de déposer le fichier `saved_model.pb` dans un répertoire sur GCS.
+
+Une fois cela fait, redez-vous sur le service CloudML.
+Il suffit maintenant de créer un modèle en lui donnant un nom et une description.
+Dans ce modèle, créez une nouvelle version en pointant vers le répertoire contenant le fichier protobuff, et en spécifiant la version de runtime 1.5.
+
+Après quelques secondes (voir minutes) d'attente, la première version du modèle sera déployée.
+
+## Test du modèle
+
+Il est maintenant temps d'écrire un script pour tester le modèle qui vient d'être déployé.
+Ce script sera `python predict/gcloud.py --image data/fruits/apple/image_apple1.jpeg --project_id aerobic-coast-161423 --model_name simple_mnist --model_version v2 --decode_preds_fn inception --top 6`
+La sortie devrait à nouveau avoir un résultat semblable.
 
 # Un nouveau modèle
 
-TODO à rédiger => précision sur le temps d'entraînement sur un MBP (env 3h)
+Jean est heureux. Il peut continuer à travailler. Si bien qu'il revient vers vous quelques jours plus tard.
+Le modèle InceptionV3 est établi sur un trop grand nombre de classe.
+Jean souhaiterais ne prédire que des fruits et sans rentrer dans le détail de l'espèce du fruit en question (il se moque bien de savoir que la pomme est une Granny Smith).
+
+## Entraînement dans le Cloud
+
+Il a donc amélioré son code et utilisé du transfert learning.
+La nouvelle difficulé qu'il rencontre maintenant est que le modèle doit être réentraîné.
+Son poste n'est pas assez performant, il souhaiterais un entraînement dans le cloud.
+
+PS : à titre d'information, l'exercice que vous allez faire maintenant a tourné en local sur un MacBook Pro et à pris environ 3h pour 3 itérations.
+Le modèle que l'on souhaite entraîner devrait tourner sur au moins 20 itérations.
+
+TODO à rédiger =>
 ```
 Loading base model ...
 Loaded
@@ -213,32 +244,36 @@ Converted 380 variables to const ops.
 End : took 3:00:45.203420
 ```
 
-## Entraînement dans le Cloud
-
-TODO à rédiger
 
 ## Création d'une nouvelle version du modèle
 
-TODO à rédiger
+L'entraînement du modèle dans le cloud à générer un fichier saved_model.pb dans GCS.
+Vous pouvez donc maintenant créer une nouvelle version du modèle dans CloudML.
+
+Afin de la tester, vous pouvez utiliser le script `python predict/gcloud.py --image data/fruits/apple/image_apple1.jpeg --project_id aerobic-coast-161423 --model_name simple_mnist --model_version v4 --decode_preds_fn transfert --top 6`
 
 ## Bascule de modèle sans interruption de service
 
-TODO à rédiger
+La nouvelle version du modèle est jugée satisfaisante pour Jean.
+Il ne vous reste plus qu'à cliquer sur le bouton `Définir en tant que version par défaut` dans la liste des versions pour changer la version utilisée par défaut (celle proposée aux utilisateurs).
 
 # (Optionnel et non guidé) Vers l'infini et l'au-delà
 
+Jean a maintenant la possibilité de facilement déployer des nouvelles versions de son modèle.
+Mais jouer avec ce service vous a donner de nombreuses idées que vous explorerez dans le futur.
+
 ## CI/CD de modèles de deep learning
 
-TODO à rédiger
+Jean travaille sur des fichiers Python. Il s'agit donc de code source, et probablement, ce code est versionné.
+Vous allez donc pouvoir vous assurer que tout commit donnera lieu à une version déployabe et testable.
 
-Ce que l'on pourrait faire en plus :
-- Sur un trigger de commit GIT
-  - Entraineement du modèle
-  - Déploiement de la nouvelle version
-  - Tests fonctionnels automatisés
-  - Bascule du nouveau modèle "par défaut"
-Et BIM, CI/CD sur du Deep Learning !
+Il devient plus facile de faire de la CI/CD sur du deep learning.
 
 ## Prédictions en HTTP
 
-(Optional) Création d'une lambda pour répondre à un POST HTTP
+Pour l'instant, les appels à l'API de prédiction sont réalisés en Python.
+Vous aimeriez pouvoir envoyer les images via des requêtes HTTP pour récupérer les prédictions.
+
+Peut-être qu'une Google Cloud function bien paramétrée répondrait au problème.
+
+A vous de jouer !
