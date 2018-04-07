@@ -1,7 +1,10 @@
-tensorflow:1.5
+tensorflow
 keras
 h5py
 Pillow
 numpy
 oauth2client
 google-api-python-client
+scikit-learn
+requests
+google-cloud-storage

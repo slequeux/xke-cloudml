@@ -10,7 +10,7 @@ BUCKET = 'sleq-ml-engine'
 model = InceptionV3(weights='imagenet')
 
 
-def test_on_image(path='F:\\photos\\2011\\2011_07_conduite_ferrari\\IMG_2704.JPG'):
+def test_on_image(path='/Users/slequeux/Documents/test_images/20171226_175112.jpg'):
     img = image.load_img(path, target_size=(299, 299))
     x = image.img_to_array(
         img
