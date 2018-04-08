@@ -100,149 +100,40 @@ La sortie devrait à nouveau avoir un résultat semblable.
 
 # Un nouveau modèle
 
-Jean est heureux. Il peut continuer à travailler. Si bien qu'il revient vers vous quelques jours plus tard.
-Le modèle InceptionV3 est établi sur un trop grand nombre de classe.
-Jean souhaiterais ne prédire que des fruits et sans rentrer dans le détail de l'espèce du fruit en question (il se moque bien de savoir que la pomme est une Granny Smith).
+Paul a entendu parler de vos exploit avec cloud-ml.
+Il souhaiterais bénéficier de la puissance du cloud pour entrainer son modèle.
+Pour lancer son modèle Paul vous a donner la commande ci-dessous. Il vous a aussi précisé qu'il utilisait tensorflow 1.4
+
+```
+python task.py \
+    --job-dir $MODEL_DIR \
+    --train-files $TRAIN_DATA \
+    --eval-files $EVAL_DATA \
+    --train-steps 1000 \
+    --eval-steps 100
+
+```
 
 ## Entraînement dans le Cloud
 
-Il a donc amélioré son code et utilisé du transfert learning.
-La nouvelle difficulé qu'il rencontre maintenant est que le modèle doit être réentraîné.
-Son poste n'est pas assez performant, il souhaiterais un entraînement dans le cloud.
-
-PS : à titre d'information, l'exercice que vous allez faire maintenant a tourné en local sur un MacBook Pro et à pris environ 3h pour 3 itérations.
-Le modèle que l'on souhaite entraîner devrait tourner sur au moins 20 itérations.
-
-TODO à rédiger =>
+Les données d'entrainement et d'évaluation sont déja sur google storage.
+On souhaite que le model entrainé soit stocké sur google storage dans le dossier paul/model/my_model.
+On utilise la region europe-west1.
 ```
-Loading base model ...
-Loaded
-Loading input dataset
-Loading category fruits
-Found 9 labels ['apple', 'strawberry', 'kiwi', 'raspberry', 'mango', 'banana', 'grape', 'pineapple', 'orange']
-Loading label apple
-	Found 1033 examples
-	Loaded
-Loading label strawberry
-	Found 1172 examples
-	Loaded
-Loading label kiwi
-	Found 1149 examples
-	Loaded
-Loading label raspberry
-	Found 1243 examples
-	Loaded
-Loading label mango
-	Found 1016 examples
-	Loaded
-Loading label banana
-	Found 1111 examples
-	Loaded
-Loading label grape
-	Found 1354 examples
-	Loaded
-Loading label pineapple
-	Found 936 examples
-	Loaded
-Loading label orange
-	Found 1177 examples
-	Loaded
-Category fruits loaded
-Defining the model
-Training ...
-Train on 7643 samples, validate on 2548 samples
-Epoch 1/3
- - 3253s - loss: 0.9586 - acc: 0.6915 - val_loss: 12.3438 - val_acc: 0.1252
-Epoch 2/3
- - 2717s - loss: 0.6516 - acc: 0.7909 - val_loss: 13.4497 - val_acc: 0.1240
-Epoch 3/3
- - 3181s - loss: 0.6022 - acc: 0.7979 - val_loss: 13.2632 - val_acc: 0.1287
-
-  32/2548 [..............................] - ETA: 13:38
-  64/2548 [..............................] - ETA: 12:45
-  96/2548 [>.............................] - ETA: 12:07
- 128/2548 [>.............................] - ETA: 11:41
- 160/2548 [>.............................] - ETA: 12:11
- 192/2548 [=>............................] - ETA: 12:24
- 224/2548 [=>............................] - ETA: 12:01
- 256/2548 [==>...........................] - ETA: 11:45
- 288/2548 [==>...........................] - ETA: 11:48
- 320/2548 [==>...........................] - ETA: 11:28
- 352/2548 [===>..........................] - ETA: 11:27
- 384/2548 [===>..........................] - ETA: 11:16
- 416/2548 [===>..........................] - ETA: 11:03
- 448/2548 [====>.........................] - ETA: 10:51
- 480/2548 [====>.........................] - ETA: 10:39
- 512/2548 [=====>........................] - ETA: 10:24
- 544/2548 [=====>........................] - ETA: 10:09
- 576/2548 [=====>........................] - ETA: 9:57
- 608/2548 [======>.......................] - ETA: 9:44
- 640/2548 [======>.......................] - ETA: 9:31
- 672/2548 [======>.......................] - ETA: 9:19
- 704/2548 [=======>......................] - ETA: 9:08
- 736/2548 [=======>......................] - ETA: 8:57
- 768/2548 [========>.....................] - ETA: 8:45
- 800/2548 [========>.....................] - ETA: 8:35
- 832/2548 [========>.....................] - ETA: 8:23
- 864/2548 [=========>....................] - ETA: 8:13
- 896/2548 [=========>....................] - ETA: 8:02
- 928/2548 [=========>....................] - ETA: 7:51
- 960/2548 [==========>...................] - ETA: 7:41
- 992/2548 [==========>...................] - ETA: 7:31
-1024/2548 [===========>..................] - ETA: 7:21
-1056/2548 [===========>..................] - ETA: 7:11
-1088/2548 [===========>..................] - ETA: 7:01
-1120/2548 [============>.................] - ETA: 6:51
-1152/2548 [============>.................] - ETA: 6:41
-1184/2548 [============>.................] - ETA: 6:32
-1216/2548 [=============>................] - ETA: 6:22
-1248/2548 [=============>................] - ETA: 6:12
-1280/2548 [==============>...............] - ETA: 6:03
-1312/2548 [==============>...............] - ETA: 5:53
-1344/2548 [==============>...............] - ETA: 5:44
-1376/2548 [===============>..............] - ETA: 5:34
-1408/2548 [===============>..............] - ETA: 5:25
-1440/2548 [===============>..............] - ETA: 5:16
-1472/2548 [================>.............] - ETA: 5:06
-1504/2548 [================>.............] - ETA: 4:57
-1536/2548 [=================>............] - ETA: 4:48
-1568/2548 [=================>............] - ETA: 4:38
-1600/2548 [=================>............] - ETA: 4:29
-1632/2548 [==================>...........] - ETA: 4:20
-1664/2548 [==================>...........] - ETA: 4:11
-1696/2548 [==================>...........] - ETA: 4:02
-1728/2548 [===================>..........] - ETA: 3:52
-1760/2548 [===================>..........] - ETA: 3:43
-1792/2548 [====================>.........] - ETA: 3:34
-1824/2548 [====================>.........] - ETA: 3:25
-1856/2548 [====================>.........] - ETA: 3:16
-1888/2548 [=====================>........] - ETA: 3:07
-1920/2548 [=====================>........] - ETA: 2:57
-1952/2548 [=====================>........] - ETA: 2:48
-1984/2548 [======================>.......] - ETA: 2:39
-2016/2548 [======================>.......] - ETA: 2:30
-2048/2548 [=======================>......] - ETA: 2:21
-2080/2548 [=======================>......] - ETA: 2:12
-2112/2548 [=======================>......] - ETA: 2:03
-2144/2548 [========================>.....] - ETA: 1:53
-2176/2548 [========================>.....] - ETA: 1:44
-2208/2548 [========================>.....] - ETA: 1:35
-2240/2548 [=========================>....] - ETA: 1:26
-2272/2548 [=========================>....] - ETA: 1:17
-2304/2548 [==========================>...] - ETA: 1:08
-2336/2548 [==========================>...] - ETA: 59s
-2368/2548 [==========================>...] - ETA: 50s
-2400/2548 [===========================>..] - ETA: 41s
-2432/2548 [===========================>..] - ETA: 32s
-2464/2548 [============================>.] - ETA: 23s
-2496/2548 [============================>.] - ETA: 14s
-2528/2548 [============================>.] - ETA: 5s
-2548/2548 [==============================] - 714s 280ms/step
-Loss 13.2631947085, Accuracy 0.128728414489
-Exporting ...
-Converted 380 variables to const ops.
-End : took 3:00:45.203420
+TRAIN_DATA=gs://sleq-ml-engine/paul/data/adult.data.csv
+EVAL_DATA=gs://sleq-ml-engine/paul/data/adult.test.csv
+JOB_NAME=my_model
+OUTPUT_PATH=gs://sleq-ml-engine/paul/model/$JOB_NAME
+REGION=europe-west1
 ```
+
+pour savoir comment lancer un entrainement dans le cloud aider vous de la commande suivante.
+```
+gcloud ml-engine jobs submit training --help
+```
+
+lors d'un entrainement dans le cloud vous mettez d'abord les paramètre pour configurer cloud-ml puis vous utilisez le séparateur `--` et vous metez les paramètre à passer à votre programme python.
+cependant le --job-dir et un paramètre un peu spécial il faut le passer dans le paramètre cloud-ml mais il sera aussi automatiquement passer à votre programme.
 
 
 ## Création d'une nouvelle version du modèle
