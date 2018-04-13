@@ -11,5 +11,5 @@ N'écoutant que votre coeur, vous vous lancez dans cette tâche chevaleresque :
 - Exercice 0 : [Pré-requis](docs/00-requirements.md)
 - Exercice 1 : [Prédictions en local](docs/01-local_inception.md)
 - Exercice 2 : [Prédictions sur le cloud](docs/02-gcloud_inception.md)
-- Exercice 3 : [Entrînement dans le Cloud](docs/03-gcloud-training.md)
+- Exercice 3 : [Entraînement dans le Cloud](docs/03-gcloud-training.md)
 - Exercice 4 : [Pour aller plus loin](docs/04-to-infinity-and-beyond.md)
