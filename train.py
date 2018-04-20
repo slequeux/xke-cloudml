@@ -28,11 +28,6 @@ def test_on_image(path='/Users/slequeux/Documents/test_images/20171226_175112.jp
 
 
 def export_inception_with_base64_decode():
-    sess = K.get_session()
-    g_trans = sess.graph
-    g_trans_def = graph_util.convert_variables_to_constants(sess,
-                                                            g_trans.as_graph_def(),
-                                                            [model.output.name.replace(':0', '')])
 
     # Step 1 : Build a graph that converts image
     with tf.Graph().as_default() as g_input:
@@ -48,6 +43,12 @@ def export_inception_with_base64_decode():
 
     # Convert to GraphDef
     g_input_def = g_input.as_graph_def()
+
+    sess = K.get_session()
+    g_trans = sess.graph
+    g_trans_def = graph_util.convert_variables_to_constants(sess,
+                                                            g_trans.as_graph_def(),
+                                                            [model.output.name.replace(':0', '')])
 
     with tf.Graph().as_default() as g_combined:
         x = tf.placeholder(tf.string, name="input_b64")
@@ -74,7 +75,7 @@ def export_inception_with_base64_decode():
 
             # save as SavedModel
             sess2.run(tf.global_variables_initializer())
-            b = tf.saved_model.builder.SavedModelBuilder('./models/pure_inception/')
+            b = tf.saved_model.builder.SavedModelBuilder('./models/test2/')
             # b = tf.saved_model.builder.SavedModelBuilder('gs://{}/simple-mnist/v2'.format(BUCKET))
             b.add_meta_graph_and_variables(sess2,
                                            [tf.saved_model.tag_constants.SERVING],

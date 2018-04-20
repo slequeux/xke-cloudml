@@ -81,4 +81,4 @@ args = parser.parse_args()
 if args.model_path:
     predict_from_saved_model(args.model_path, args.image_path, args.decode_fn, args.top)
 else:
-    predict_from_inception(args.image_path, args.top)
+    predict_from_inception(args.image_path, int(args.top))
