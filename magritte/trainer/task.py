@@ -16,14 +16,39 @@ if __name__ == '__main__':
     parser.add_argument(
         '--num-epochs',
         help="""\
-      Maximum number of training data epochs on which to train.
-      If both --max-steps and --num-epochs are specified,
-      the training job will run for --max-steps or --num-epochs,
-      whichever occurs first. If unspecified will run for --max-steps.\
+      Maximum number of training data epochs on which to train.\
       """,
         type=int,
         default=3
     )
+
+    parser.add_argument(
+        '--steps-per-epoch',
+        help="""\
+      Number of steps per epoch\
+      """,
+        type=int,
+        default=3
+    )
+
+    parser.add_argument(
+        '--validation-steps',
+        help="""\
+      Number of validation steps.\
+      """,
+        type=int,
+        default=3
+    )
+
+    parser.add_argument(
+        '--batch-size',
+        help="""\
+      Size of batch\
+      """,
+        type=int,
+        default=32
+    )
+
     parser.add_argument(
         '--job-dir',
         help='GCS location to write checkpoints and export models',

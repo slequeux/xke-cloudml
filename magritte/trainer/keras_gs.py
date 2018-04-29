@@ -1,5 +1,3 @@
-# https://github.com/keras-team/keras/blob/master/keras/preprocessing/image.py
-
 import multiprocessing.pool
 from functools import partial
 from keras.preprocessing.image import Iterator
@@ -8,9 +6,13 @@ import numpy as np
 import keras.backend as K
 import keras
 from google.cloud import storage
-import re
+import os
 
-def flow_from_google_storage(self, directory,
+# rewrite of flow_from_directory
+# https://github.com/keras-team/keras/blob/master/keras/preprocessing/image.py
+
+
+def flow_from_google_storage(imageDataGen, project, bucket, directory,
                              target_size=(256, 256), color_mode='rgb',
                              classes=None, class_mode='categorical',
                              batch_size=32, shuffle=True, seed=None,
@@ -65,69 +67,18 @@ def flow_from_google_storage(self, directory,
         A DirectoryIterator yielding tuples of `(x, y)` where `x` is a numpy array containing a batch
         of images with shape `(batch_size, *target_size, channels)` and `y` is a numpy array of corresponding labels.
     """
-    return GoogleStorageIterator(
-        directory, self,
-        target_size=target_size, color_mode=color_mode,
-        classes=classes, class_mode=class_mode,
-        data_format=self.data_format,
-        batch_size=batch_size, shuffle=shuffle, seed=seed,
-        save_to_dir=save_to_dir,
-        save_prefix=save_prefix,
-        save_format=save_format,
-        follow_links=follow_links,
-        subset=subset,
-        interpolation=interpolation)
-
-
-def load_img_from_string(img_string, grayscale=False, target_size=None,
-                         interpolation='nearest'):
-    from PIL import Image as pil_image
-    import io
-    _PIL_INTERPOLATION_METHODS = {
-        'nearest': pil_image.NEAREST,
-        'bilinear': pil_image.BILINEAR,
-        'bicubic': pil_image.BICUBIC,
-    }
-    """Loads an image into PIL format.
-    # Arguments
-        path: Path to image file
-        grayscale: Boolean, whether to load the image as grayscale.
-        target_size: Either `None` (default to original size)
-            or tuple of ints `(img_height, img_width)`.
-        interpolation: Interpolation method used to resample the image if the
-            target size is different from that of the loaded image.
-            Supported methods are "nearest", "bilinear", and "bicubic".
-            If PIL version 1.1.3 or newer is installed, "lanczos" is also
-            supported. If PIL version 3.4.0 or newer is installed, "box" and
-            "hamming" are also supported. By default, "nearest" is used.
-    # Returns
-        A PIL Image instance.
-    # Raises
-        ImportError: if PIL is not available.
-        ValueError: if interpolation method is not supported.
-    """
-    if pil_image is None:
-        raise ImportError('Could not import PIL.Image. '
-                          'The use of `array_to_img` requires PIL.')
-    img = pil_image.open(io.BytesIO(img_string))
-    if grayscale:
-        if img.mode != 'L':
-            img = img.convert('L')
-    else:
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-    if target_size is not None:
-        width_height_tuple = (target_size[1], target_size[0])
-        if img.size != width_height_tuple:
-            if interpolation not in _PIL_INTERPOLATION_METHODS:
-                raise ValueError(
-                    'Invalid interpolation method {} specified. Supported '
-                    'methods are {}'.format(
-                        interpolation,
-                        ", ".join(_PIL_INTERPOLATION_METHODS.keys())))
-            resample = _PIL_INTERPOLATION_METHODS[interpolation]
-            img = img.resize(width_height_tuple, resample)
-    return img
+    return GoogleStorageIterator(project, bucket,
+                                 directory, imageDataGen,
+                                 target_size=target_size, color_mode=color_mode,
+                                 classes=classes, class_mode=class_mode,
+                                 data_format=imageDataGen.data_format,
+                                 batch_size=batch_size, shuffle=shuffle, seed=seed,
+                                 save_to_dir=save_to_dir,
+                                 save_prefix=save_prefix,
+                                 save_format=save_format,
+                                 follow_links=follow_links,
+                                 subset=subset,
+                                 interpolation=interpolation)
 
 
 class GoogleStorageIterator(Iterator):
@@ -239,22 +190,20 @@ class GoogleStorageIterator(Iterator):
 
         if not classes:
             labels_folder_iter = self.bucket.list_blobs(delimiter="/", prefix=directory)
-            list(labels_folder_iter)  # populate blob_iter
+            list(labels_folder_iter)  # populate labels_folder_iter
             classes = [p[len(directory):-1] for p in labels_folder_iter.prefixes]
 
-#        for subdir in sorted(os.listdir(directory)):
-#                if os.path.isdir(os.path.join(directory, subdir)):
-#                    classes.append(subdir)
         self.num_classes = len(classes)
         self.class_indices = dict(zip(classes, range(len(classes))))
 
         pool = multiprocessing.pool.ThreadPool()
-        function_partial = partial(_count_valid_files_in_directory,
+        function_partial = partial(self._count_valid_files_in_directory,
+                                   bucket=self.bucket,
                                    white_list_formats=white_list_formats,
                                    follow_links=follow_links,
                                    split=split)
         self.samples = sum(pool.map(function_partial,
-                                    (directory + "/" + subdir for subdir in classes)))
+                                    (os.path.join(directory, subdir) for subdir in classes)))
 
         print('Found %d images belonging to %d classes.' % (self.samples, self.num_classes))
 
@@ -264,10 +213,9 @@ class GoogleStorageIterator(Iterator):
         self.filenames = []
         self.classes = np.zeros((self.samples,), dtype='int32')
         i = 0
-        # for dirpath in (os.path.join(directory, subdir) for subdir in classes):
-        for dirpath in (directory + "/" + subdir for subdir in classes):
-            results.append(pool.apply_async(_list_valid_filenames_in_directory,
-                                            (bucket, dirpath, white_list_formats, split,
+        for dirpath in (os.path.join(directory, subdir) for subdir in classes):
+            results.append(pool.apply_async(self._list_valid_filenames_in_directory,
+                                            (dirpath, self.bucket, white_list_formats, split,
                                              self.class_indices, follow_links)))
         for res in results:
             classes, filenames = res.get()
@@ -285,20 +233,17 @@ class GoogleStorageIterator(Iterator):
         # build batch of image data
         for i, j in enumerate(index_array):
             fname = self.filenames[j]
-            blob = self.bucket.get_blob(fname, self.storage_client)
-            img = load_img_from_string(blob.download_as_string(self.storage_client),
+            blob = self.bucket.get_blob(os.path.join(self.directory, fname), self.storage_client)
+            img = self.load_img_from_string(blob.download_as_string(self.storage_client),
                                        grayscale=grayscale,
                                        target_size=self.target_size,
                                        interpolation=self.interpolation)
 
-#            img = load_img(os.path.join(self.directory, fname),
-#                           grayscale=grayscale,
-#                           target_size=self.target_size,
-#                           interpolation=self.interpolation)
             x = keras.preprocessing.image.img_to_array(img, data_format=self.data_format)
             x = self.image_data_generator.random_transform(x)
             x = self.image_data_generator.standardize(x)
             batch_x[i] = x
+        # TODO write save to gs
         # optionally save augmented images to disk for debugging purposes
 #        if self.save_to_dir:
 #            for i, j in enumerate(index_array):
@@ -334,55 +279,53 @@ class GoogleStorageIterator(Iterator):
         # so it can be done in parallel
         return self._get_batches_of_transformed_samples(index_array)
 
+    def _count_valid_files_in_directory(self, directory, bucket, white_list_formats, split, follow_links):
+        """Count files with extension in `white_list_formats` contained in directory.
 
-def _count_valid_files_in_directory(bucket, directory, white_list_formats, split, follow_links):
-    """Count files with extension in `white_list_formats` contained in directory.
+        # Arguments
+            directory: absolute path to the directory
+                containing files to be counted
+            white_list_formats: set of strings containing allowed extensions for
+                the files to be counted.
+            split: tuple of floats (e.g. `(0.2, 0.6)`) to only take into
+                account a certain fraction of files in each directory.
+                E.g.: `segment=(0.6, 1.0)` would only account for last 40 percent
+                of images in each directory.
+            follow_links: boolean.
 
-    # Arguments
-        directory: absolute path to the directory
-            containing files to be counted
-        white_list_formats: set of strings containing allowed extensions for
-            the files to be counted.
-        split: tuple of floats (e.g. `(0.2, 0.6)`) to only take into
-            account a certain fraction of files in each directory.
-            E.g.: `segment=(0.6, 1.0)` would only account for last 40 percent
-            of images in each directory.
-        follow_links: boolean.
+        # Returns
+            the count of files with extension in `white_list_formats` contained in
+            the directory.
+        """
+        num_files = len(list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links)))
+        if split:
+            start, stop = int(split[0] * num_files), int(split[1] * num_files)
+        else:
+            start, stop = 0, num_files
+        return stop - start
 
-    # Returns
-        the count of files with extension in `white_list_formats` contained in
-        the directory.
-    """
-    num_files = len(list(_iter_valid_files(bucket, directory, white_list_formats, follow_links)))
-    if split:
-        start, stop = int(split[0] * num_files), int(split[1] * num_files)
-    else:
-        start, stop = 0, num_files
-    return stop - start
+    def _iter_valid_files(self, directory, bucket, white_list_formats, follow_links):
+        """Count files with extension in `white_list_formats` contained in directory.
 
+        # Arguments
+            directory: absolute path to the directory
+                containing files to be counted
+            white_list_formats: set of strings containing allowed extensions for
+                the files to be counted.
+            follow_links: boolean.
 
-def _iter_valid_files(bucket, directory, white_list_formats, follow_links):
-    """Count files with extension in `white_list_formats` contained in directory.
+        # Yields
+            tuple of (root, filename) with extension in `white_list_formats`.
+        """
+        def _recursive_list(subpath):
+            # TODO should return all file path relative to subpath walk trhough any directory it find
+            if subpath[-1] != '/':
+                subpath = subpath + '/'
+            iter_blobs = bucket.list_blobs(delimiter="/", prefix=subpath)
+            blobs = list(iter_blobs)
+            return map(lambda blob: (subpath, blob.name[len(subpath):]), blobs)
 
-    # Arguments
-        directory: absolute path to the directory
-            containing files to be counted
-        white_list_formats: set of strings containing allowed extensions for
-            the files to be counted.
-        follow_links: boolean.
-
-    # Yields
-        tuple of (root, filename) with extension in `white_list_formats`.
-    """
-    def _recursive_list(subpath):
-        # should return all file path relative to subpath walk trhough any directory it find
-        labels_folder_iter = bucket.list_blobs(delimiter="/", prefix=subpath)
-        return map(lambda x: (subpath, x[len(subpath):]),list(labels_folder_iter))
-        #return sorted(os.walk(subpath, followlinks=follow_links), key=lambda x: x[0])
-
-    #for root, _, files in _recursive_list(directory):
-    for root, files in _recursive_list(directory):
-        for fname in sorted(files):
+        for root, fname in _recursive_list(directory):
             for extension in white_list_formats:
                 if fname.lower().endswith('.tiff'):
                     warnings.warn('Using \'.tiff\' files with multiple bands will cause distortion. '
@@ -390,53 +333,94 @@ def _iter_valid_files(bucket, directory, white_list_formats, follow_links):
                 if fname.lower().endswith('.' + extension):
                     yield root, fname
 
+    def _list_valid_filenames_in_directory(self, directory, bucket, white_list_formats, split,
+                                           class_indices, follow_links):
+        """List paths of files in `subdir` with extensions in `white_list_formats`.
 
-def _list_valid_filenames_in_directory(bucket, directory, white_list_formats, split,
-                                       class_indices, follow_links):
-    """List paths of files in `subdir` with extensions in `white_list_formats`.
+        # Arguments
+            directory: absolute path to a directory containing the files to list.
+                The directory name is used as class label and must be a key of `class_indices`.
+            white_list_formats: set of strings containing allowed extensions for
+                the files to be counted.
+            split: tuple of floats (e.g. `(0.2, 0.6)`) to only take into
+                account a certain fraction of files in each directory.
+                E.g.: `segment=(0.6, 1.0)` would only account for last 40 percent
+                of images in each directory.
+            class_indices: dictionary mapping a class name to its index.
+            follow_links: boolean.
 
-    # Arguments
-        directory: absolute path to a directory containing the files to list.
-            The directory name is used as class label and must be a key of `class_indices`.
-        white_list_formats: set of strings containing allowed extensions for
-            the files to be counted.
-        split: tuple of floats (e.g. `(0.2, 0.6)`) to only take into
-            account a certain fraction of files in each directory.
-            E.g.: `segment=(0.6, 1.0)` would only account for last 40 percent
-            of images in each directory.
-        class_indices: dictionary mapping a class name to its index.
-        follow_links: boolean.
+        # Returns
+            classes: a list of class indices
+            filenames: the path of valid files in `directory`, relative from
+                `directory`'s parent (e.g., if `directory` is "dataset/class1",
+                the filenames will be ["class1/file1.jpg", "class1/file2.jpg", ...]).
+        """
+        dirname = os.path.basename(directory)
 
-    # Returns
-        classes: a list of class indices
-        filenames: the path of valid files in `directory`, relative from
-            `directory`'s parent (e.g., if `directory` is "dataset/class1",
-            the filenames will be ["class1/file1.jpg", "class1/file2.jpg", ...]).
-    """
-    # dirname = os.path.basename(directory)
-    dirname_search = re.search('\/([\.\w-]+)\/?$', directory, re.IGNORECASE)
-    try:
-        dirname = dirname_search.group(1)
-    except AttributeError:
-        warnings.warn('couldn\'t extract dirname of: ' + directory)
-        return
+        if split:
+            num_files = len(list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links)))
+            start, stop = int(split[0] * num_files), int(split[1] * num_files)
+            valid_files = list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links))[start: stop]
+        else:
+            valid_files = self._iter_valid_files(directory, bucket, white_list_formats, follow_links)
 
-    if split:
-        num_files = len(list(_iter_valid_files(bucket, directory, white_list_formats, follow_links)))
-        start, stop = int(split[0] * num_files), int(split[1] * num_files)
-        valid_files = list(_iter_valid_files(bucket, directory, white_list_formats, follow_links))[start: stop]
-    else:
-        valid_files = _iter_valid_files(bucket, directory, white_list_formats, follow_links)
+        classes = []
+        filenames = []
+        for root, fname in valid_files:
+            classes.append(class_indices[dirname])
+            absolute_path = os.path.join(root, fname)
+            relative_path = os.path.join(dirname, os.path.relpath(absolute_path, directory))
 
-    classes = []
-    filenames = []
-    for root, fname in valid_files:
-        classes.append(class_indices[dirname])
-        # absolute_path = os.path.join(root, fname)
-        absolute_path = root + "/" + fname
-        # relative_path = os.path.join(dirname, os.path.relpath(absolute_path, directory))
-        relative_path = dirname + absolute_path[len(directory):]
+            filenames.append(relative_path)
 
-        filenames.append(relative_path)
+        return classes, filenames
 
-    return classes, filenames
+    def load_img_from_string(self, img_string, grayscale=False, target_size=None,
+                             interpolation='nearest'):
+        from PIL import Image as pil_image
+        import io
+        _PIL_INTERPOLATION_METHODS = {
+            'nearest': pil_image.NEAREST,
+            'bilinear': pil_image.BILINEAR,
+            'bicubic': pil_image.BICUBIC,
+        }
+        """Loads an image into PIL format.
+        # Arguments
+            path: Path to image file
+            grayscale: Boolean, whether to load the image as grayscale.
+            target_size: Either `None` (default to original size)
+                or tuple of ints `(img_height, img_width)`.
+            interpolation: Interpolation method used to resample the image if the
+                target size is different from that of the loaded image.
+                Supported methods are "nearest", "bilinear", and "bicubic".
+                If PIL version 1.1.3 or newer is installed, "lanczos" is also
+                supported. If PIL version 3.4.0 or newer is installed, "box" and
+                "hamming" are also supported. By default, "nearest" is used.
+        # Returns
+            A PIL Image instance.
+        # Raises
+            ImportError: if PIL is not available.
+            ValueError: if interpolation method is not supported.
+        """
+        if pil_image is None:
+            raise ImportError('Could not import PIL.Image. '
+                              'The use of `array_to_img` requires PIL.')
+        img = pil_image.open(io.BytesIO(img_string))
+        if grayscale:
+            if img.mode != 'L':
+                img = img.convert('L')
+        else:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+        if target_size is not None:
+            width_height_tuple = (target_size[1], target_size[0])
+            if img.size != width_height_tuple:
+                if interpolation not in _PIL_INTERPOLATION_METHODS:
+                    raise ValueError(
+                        'Invalid interpolation method {} specified. Supported '
+                        'methods are {}'.format(
+                            interpolation,
+                            ", ".join(_PIL_INTERPOLATION_METHODS.keys())))
+                resample = _PIL_INTERPOLATION_METHODS[interpolation]
+                img = img.resize(width_height_tuple, resample)
+        return img

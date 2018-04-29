@@ -1,70 +1,27 @@
-import keras
 from keras import backend as K
-from keras.preprocessing import image
 from keras.applications.inception_v3 import InceptionV3 #, preprocess_input, decode_predictions
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
+import keras_gs
 
+PROJECT = 'aerobic-coast-161423'
 BUCKET = 'sleq-ml-engine'
+PATH = 'data/raw/fruits/'
 
 
 def load_inception():
     print('Loading base model ...')
     # https://medium.com/google-cloud/serverless-transfer-learning-with-cloud-ml-engine-and-keras-335435f31e15
     model = InceptionV3(weights='imagenet')
-    # model = ''
     print('Loaded')
     return model
 
 
-def load_dataset_from_gs(hparams):
-    from keras.utils.np_utils import to_categorical
-    from google.cloud import storage
-
-    PROJECT = 'aerobic-coast-161423'
-    BUCKET = 'sleq-ml-engine'
-    PATH = 'data/raw/fruits/'
-
-    category = 'fruits'
-    storage_client = storage.Client(PROJECT)
-    bucket = storage_client.get_bucket(BUCKET)
-    labels_folder_iter = bucket.list_blobs(delimiter="/", prefix=PATH)
-    list(labels_folder_iter) # populate blob_iter
-    labels = [p[len(PATH):-1] for p in labels_folder_iter.prefixes]
-    print('Found %s labels %s' % (len(labels), labels))
-    X_dataset = np.zeros(shape=(1, 299, 299, 3))
-    y_dataset = np.zeros(shape=1)
-    for idx, label in enumerate(labels):
-        print('Loading label %s' % label)
-        dir_path = '%s%s/' % (PATH, label)
-        img_blob_iter = bucket.list_blobs(delimiter="/", prefix=dir_path)
-        paths = list(img_blob_iter)
-        imgs = map(lambda blob: load_img_from_string(blob.download_as_string(storage_client), target_size=(299, 299)), paths)
-        imgs = map(lambda img: np.expand_dims(image.img_to_array(img), 0), imgs)
-        imgs = np.concatenate(imgs)
-        X_dataset = np.concatenate((X_dataset, imgs), axis=0)
-        labels = map(lambda path: idx, paths)
-        labels = np.array(labels)
-        y_dataset = np.concatenate((y_dataset, labels), axis=0)
-        print('\tLoaded')
-    print('Category %s loaded' % category)
-
-    X_dataset = X_dataset[1:, :, :, :]
-    y_dataset = y_dataset[1:]
-    y_dataset = to_categorical(y_dataset)
-
-    return X_dataset, y_dataset
-
 def export_inception_with_base64_decode(model, hparams):
     from keras.models import Model
     from keras.layers import Dense
-    from sklearn.model_selection import train_test_split
 
     print('Loading input dataset')
-    #X_dataset, y_dataset = load_dataset_from_gs(hparams)
-    #X_train, X_test, y_train, y_test = train_test_split(
-    #    X_dataset, y_dataset, test_size=0.25, random_state=42)
     num_classes = 9
 
     # Intermediate layer
@@ -90,30 +47,25 @@ def export_inception_with_base64_decode(model, hparams):
     from keras.preprocessing.image import ImageDataGenerator
     datagen = ImageDataGenerator(validation_split=0.25)
 
-    train_generator = datagen.flow_from_directory(
-        # This is the target directory
-        'data/raw/fruits/',
+    train_generator = keras_gs.flow_from_google_storage(datagen,
+        PROJECT, BUCKET, PATH,
         subset="training",
         target_size=(299, 299),
-        batch_size=20)
+        batch_size=hparams.batch_size)
 
-    validation_generator = datagen.flow_from_directory(
-        'data/raw/fruits/',
+    validation_generator = keras_gs.flow_from_google_storage(datagen,
+        PROJECT, BUCKET, PATH,
         subset="validation",
         target_size=(299, 299),
-        batch_size=20)
+        batch_size=hparams.batch_size)
 
     history = transfer_model.fit_generator(
         train_generator,
-        steps_per_epoch=100,
-        epochs=hparams.num_epoch,
+        steps_per_epoch=hparams.steps_per_epoch,
+        epochs=hparams.num_epochs,
         validation_data=validation_generator,
-        validation_steps=50)
+        validation_steps=hparams.validation_steps)
 
-    #  transfer_model.fit(X_train, y_train, epochs=hparams.num_epoch,
-    #                     verbose=2,
-    #                     validation_data=(X_test, y_test))
-    #  loss, acc = transfer_model.evaluate(X_test, y_test)
     acc = history.history['acc']
     val_acc = history.history['val_acc']
     loss = history.history['loss']
@@ -167,8 +119,7 @@ def export_inception_with_base64_decode(model, hparams):
 
             # save as SavedModel
             sess2.run(tf.global_variables_initializer())
-            # b = tf.saved_model.builder.SavedModelBuilder('./models/v2')
-            b = tf.saved_model.builder.SavedModelBuilder(hparams.job_dir)
+            b = tf.saved_model.builder.SavedModelBuilder(hparams.job_dir+"_model")
             b.add_meta_graph_and_variables(sess2,
                                            [tf.saved_model.tag_constants.SERVING],
                                            signature_def_map={'serving_default': signature})
