@@ -2,9 +2,12 @@ import argparse
 
 import tensorflow as tf
 from keras import backend as keras_backend
+from keras.applications import InceptionV3
 from tensorflow.python.framework import graph_util
 
-from predict.local import load_inception
+
+def load_inception():
+    return InceptionV3(weights='imagenet')
 
 
 def add_base_64_decode_input_layers(model):
@@ -72,7 +75,7 @@ def export_inception(path):
 
 
 parser = argparse.ArgumentParser(description='Export a model as protobuff file')
-parser.add_argument("--dest", dest="model_dir", help="Path to store exported model",
+parser.add_argument("--model_dir", dest="model_dir", help="Path to store exported model",
                     metavar="FILE", default='./models/inception_v3')
 args = parser.parse_args()
 
