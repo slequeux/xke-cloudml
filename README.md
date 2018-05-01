@@ -13,3 +13,5 @@ N'écoutant que votre coeur, vous vous lancez dans cette tâche chevaleresque :
 - Exercice 2 : [Prédictions sur le cloud](docs/02-gcloud_inception.md)
 - Exercice 3 : [Entraînement dans le Cloud](docs/03-gcloud-training.md)
 - Exercice 4 : [Pour aller plus loin](docs/04-to-infinity-and-beyond.md)
+
+Remerciements spéciaux à Hayato Yoshikawa et son article [Serverless Transfer Learning with Cloud ML Engine and Keras](https://medium.com/google-cloud/serverless-transfer-learning-with-cloud-ml-engine-and-keras-335435f31e15) qui m'ont grandement aidé à la rédaction de ce Hands'on.

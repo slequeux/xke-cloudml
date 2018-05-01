@@ -19,21 +19,24 @@ python export/export_model.py --model_dir /path/to/model/
 
 Nous allons maintenant décrire ce qui est réalisé par ce script.
 
-La fonction `export_current_graph_for_serving` permet de définir une fonction de serving à sauvegarder.
-Cette fonction défini deux tenseurs :
-- Celui d'entrée : lorsque le service de serving recevra une requête, il injectera les données dans ce tenseur
-- Celui de sortie : ce tenseur contient les prédictions.
+La fonction `load_inception` ... charge le modèle InceptionV3.
 
-Par défaut, Inception prend en entrée des images sous forme de tableaux de float64.
-Transférer une image par ce moyen serait coûteux et nous allons donc les faire transiter dans un autre format.
-La fonction `add_base_64_decode_input_layers` permet d'ajouter quelques étapes au graph d'exécution du modèle InceptionV3 afin de transformer un input encodé en base 64 dans le format cible d'Inception.
+La fonction `preprocess_b64_to_image` créé quelques couches de préprocessing pour le réseau.
+L'idée est que la demande de prédiction passera par le réseau.
+Transférer l'image telle quelle serait trop gourmand.
+On va donc l'encoder en base 64 avant le transfert.
+Ces couches effectuent la phase de décodage.
+
+La fonction `model_as_graph_no_variable` fige les variables du modèle InceptionV3 dans des constantes.
+
+Enfin, la fonction `export_keras_model_with_base_64_decode_input` assemble le puzzle et réalise la sérialisation sur disque.
 
 Après l'exécution de ce script, le répertoire de destination du modèle contient plusieurs éléments :
 - Un fichier `saved_model.pb` contenant toutes les constantes du modèle : le graph et les poids entraînés
 - Un répertoire `variables` qui contient les variables.
   Notre modèle n'en contient pas et ce répertoire sera donc vide.
 
-## Effectuer une prédiction sur le modèle exporter
+## Effectuer une prédiction sur le modèle exporté
 
 Nous allons tester que le modèle répond toujours correctement.
 Pour cela, vous lancez la commande suivante :
@@ -46,6 +49,9 @@ python predict/local.py --image /path/to/image --model_path /path/to/model --dec
 ```
 
 La prédiction ainsi obtenue devrait être semblable au résultat précédent.
+
+*Attention* : Pour l'instant, vous devriez observer une dégradation des performances.
+Cela est principalement du à un preprocessing de l'image réalisé lorsque l'on est en local qui n'est pas encore implémenté dans ce mode.
 
 # Prédiction dans le cloud
 
