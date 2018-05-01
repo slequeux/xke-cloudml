@@ -17,7 +17,8 @@ def export_inception_with_base64_decode(model, hparams):
     from keras.models import Model
     from keras.layers import Dense
 
-    K.tensorflow_backend._get_available_gpus()
+    print("check gpu")
+    print(K.tensorflow_backend._get_available_gpus())
 
     num_classes = 9
 

@@ -189,23 +189,23 @@ class GoogleStorageIterator(Iterator):
         self.samples = 0
 
         if not classes:
-            labels_folder_iter = self.bucket.list_blobs(delimiter="/", prefix=directory)
+            labels_folder_iter = self.bucket.list_blobs(delimiter="/", prefix=self.directory)
             list(labels_folder_iter)  # populate labels_folder_iter
-            classes = [p[len(directory):-1] for p in labels_folder_iter.prefixes]
+            classes = [p[len(self.directory):-1] for p in sorted(labels_folder_iter.prefixes)]
 
         self.num_classes = len(classes)
         self.class_indices = dict(zip(classes, range(len(classes))))
 
         pool = multiprocessing.pool.ThreadPool()
         function_partial = partial(self._count_valid_files_in_directory,
-                                   bucket=self.bucket,
                                    white_list_formats=white_list_formats,
                                    follow_links=follow_links,
                                    split=split)
         self.samples = sum(pool.map(function_partial,
-                                    (os.path.join(directory, subdir) for subdir in classes)))
+                                    (os.path.join(self.directory, subdir) for subdir in classes)))
 
         print('Found %d images belonging to %d classes.' % (self.samples, self.num_classes))
+        print(self.class_indices)
 
         # second, build an index of the images in the different class subfolders
         results = []
@@ -213,9 +213,9 @@ class GoogleStorageIterator(Iterator):
         self.filenames = []
         self.classes = np.zeros((self.samples,), dtype='int32')
         i = 0
-        for dirpath in (os.path.join(directory, subdir) for subdir in classes):
+        for dirpath in (os.path.join(self.directory, subdir) for subdir in classes):
             results.append(pool.apply_async(self._list_valid_filenames_in_directory,
-                                            (dirpath, self.bucket, white_list_formats, split,
+                                            (dirpath, white_list_formats, split,
                                              self.class_indices, follow_links)))
         for res in results:
             classes, filenames = res.get()
@@ -279,7 +279,7 @@ class GoogleStorageIterator(Iterator):
         # so it can be done in parallel
         return self._get_batches_of_transformed_samples(index_array)
 
-    def _count_valid_files_in_directory(self, directory, bucket, white_list_formats, split, follow_links):
+    def _count_valid_files_in_directory(self, directory, white_list_formats, split, follow_links):
         """Count files with extension in `white_list_formats` contained in directory.
 
         # Arguments
@@ -297,14 +297,14 @@ class GoogleStorageIterator(Iterator):
             the count of files with extension in `white_list_formats` contained in
             the directory.
         """
-        num_files = len(list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links)))
+        num_files = len(list(self._iter_valid_files(directory, white_list_formats, follow_links)))
         if split:
             start, stop = int(split[0] * num_files), int(split[1] * num_files)
         else:
             start, stop = 0, num_files
         return stop - start
 
-    def _iter_valid_files(self, directory, bucket, white_list_formats, follow_links):
+    def _iter_valid_files(self, directory, white_list_formats, follow_links):
         """Count files with extension in `white_list_formats` contained in directory.
 
         # Arguments
@@ -321,9 +321,9 @@ class GoogleStorageIterator(Iterator):
             # TODO should return all file path relative to subpath walk trhough any directory it find
             if subpath[-1] != '/':
                 subpath = subpath + '/'
-            iter_blobs = bucket.list_blobs(delimiter="/", prefix=subpath)
+            iter_blobs = self.bucket.list_blobs(delimiter="/", prefix=subpath)
             blobs = list(iter_blobs)
-            return map(lambda blob: (subpath, blob.name[len(subpath):]), blobs)
+            return sorted(map(lambda blob: (subpath, blob.name[len(subpath):]), blobs), key=lambda x: x[1])
 
         for root, fname in _recursive_list(directory):
             for extension in white_list_formats:
@@ -333,7 +333,7 @@ class GoogleStorageIterator(Iterator):
                 if fname.lower().endswith('.' + extension):
                     yield root, fname
 
-    def _list_valid_filenames_in_directory(self, directory, bucket, white_list_formats, split,
+    def _list_valid_filenames_in_directory(self, directory, white_list_formats, split,
                                            class_indices, follow_links):
         """List paths of files in `subdir` with extensions in `white_list_formats`.
 
@@ -358,11 +358,11 @@ class GoogleStorageIterator(Iterator):
         dirname = os.path.basename(directory)
 
         if split:
-            num_files = len(list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links)))
+            num_files = len(list(self._iter_valid_files(directory, white_list_formats, follow_links)))
             start, stop = int(split[0] * num_files), int(split[1] * num_files)
-            valid_files = list(self._iter_valid_files(directory, bucket, white_list_formats, follow_links))[start: stop]
+            valid_files = list(self._iter_valid_files(directory, white_list_formats, follow_links))[start: stop]
         else:
-            valid_files = self._iter_valid_files(directory, bucket, white_list_formats, follow_links)
+            valid_files = self._iter_valid_files(directory, white_list_formats, follow_links)
 
         classes = []
         filenames = []
