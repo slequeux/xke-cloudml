@@ -6,7 +6,7 @@ Mais ici, nous allons tenter d'utiliser un service managé pour déployer son mo
 ## Exporter Inception V3
 
 Le service managé que nous allons utiliser est CloudML.
-Ce service permet d'exposer des modèles déjà entraînés. On appelle cette phase le *serving**.
+Ce service permet d'exposer des modèles déjà entraînés. On appelle cette phase le **serving**.
 CloudML effectuera donc le serving, mais uniquement pour des modèles entraînés avec TensorFlow.
 
 La première étape est de sauvegarder le modèle dans un format supporté par CloudML.
@@ -60,7 +60,7 @@ Pour cela :
 - Dans le menu déroulant en haut à gauche, cliquer sur `stockage/navigateur`
 - Créer un bucket ou bien sélectionnez un bucket déjà existant.
   Les paramètres de création ne sont pas impactants dans un premier temps.
-  Ils le deviendront quan vous souhaiterez optimiser les coûts et la réplication liés à ce modèle.
+  Ils le deviendront quand vous souhaiterez optimiser les coûts et la réplication liés à ce modèle.
 - Créer un répertoire `models/jean_inception/v1`
 - Importez le fichier `saved_model.pb` dans ce répertoire
 

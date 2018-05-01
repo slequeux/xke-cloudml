@@ -1,17 +1,13 @@
 from keras import backend as K
-from keras.applications.inception_v3 import InceptionV3 #, preprocess_input, decode_predictions
+from keras.applications.inception_v3 import InceptionV3
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 import keras_gs
-
-PROJECT = 'aerobic-coast-161423'
-BUCKET = 'sleq-ml-engine'
-PATH = 'data/raw/fruits/'
+import os
 
 
 def load_inception():
     print('Loading base model ...')
-    # https://medium.com/google-cloud/serverless-transfer-learning-with-cloud-ml-engine-and-keras-335435f31e15
     model = InceptionV3(weights='imagenet')
     print('Loaded')
     return model
@@ -21,7 +17,8 @@ def export_inception_with_base64_decode(model, hparams):
     from keras.models import Model
     from keras.layers import Dense
 
-    print('Loading input dataset')
+    K.tensorflow_backend._get_available_gpus()
+
     num_classes = 9
 
     # Intermediate layer
@@ -48,13 +45,13 @@ def export_inception_with_base64_decode(model, hparams):
     datagen = ImageDataGenerator(validation_split=0.25)
 
     train_generator = keras_gs.flow_from_google_storage(datagen,
-        PROJECT, BUCKET, PATH,
+        hparams.data_project, hparams.data_bucket, hparams.data_path,
         subset="training",
         target_size=(299, 299),
         batch_size=hparams.batch_size)
 
     validation_generator = keras_gs.flow_from_google_storage(datagen,
-        PROJECT, BUCKET, PATH,
+        hparams.data_project, hparams.data_bucket, hparams.data_path,
         subset="validation",
         target_size=(299, 299),
         batch_size=hparams.batch_size)
@@ -67,9 +64,7 @@ def export_inception_with_base64_decode(model, hparams):
         validation_steps=hparams.validation_steps)
 
     acc = history.history['acc']
-    val_acc = history.history['val_acc']
     loss = history.history['loss']
-    val_loss = history.history['val_loss']
     print('Loss {}, Accuracy {}'.format(loss, acc))
 
     print('Exporting ...')
@@ -119,7 +114,7 @@ def export_inception_with_base64_decode(model, hparams):
 
             # save as SavedModel
             sess2.run(tf.global_variables_initializer())
-            b = tf.saved_model.builder.SavedModelBuilder(hparams.job_dir+"_model")
+            b = tf.saved_model.builder.SavedModelBuilder(os.path.join(hparams.job_dir, "model"))
             b.add_meta_graph_and_variables(sess2,
                                            [tf.saved_model.tag_constants.SERVING],
                                            signature_def_map={'serving_default': signature})

@@ -46,12 +46,30 @@ if __name__ == '__main__':
       Size of batch\
       """,
         type=int,
-        default=32
+        default=64
     )
 
     parser.add_argument(
         '--job-dir',
         help='GCS location to write checkpoints and export models',
+        required=True
+    )
+
+    parser.add_argument(
+        '--data-project',
+        help='GCS project id',
+        required=True
+    )
+
+    parser.add_argument(
+        '--data-bucket',
+        help='GCS bucket name',
+        required=True
+    )
+
+    parser.add_argument(
+        '--data-path',
+        help='GCS location to read data',
         required=True
     )
 
