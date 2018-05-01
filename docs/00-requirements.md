@@ -53,7 +53,8 @@ source activate xke-cloudml
 Avant de commencer les exercices, vous pouvez d'ores et déjà installer les librairies pré-requises dans l'environnement Anaconda :
 
 ```bash
-pip install -r requirement.txt
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
 ### Confirguration de la CLI Google Cloud
