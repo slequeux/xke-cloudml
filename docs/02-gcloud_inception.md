@@ -6,7 +6,7 @@ Mais ici, nous allons tenter d'utiliser un service managé pour déployer son mo
 ## Exporter Inception V3
 
 Le service managé que nous allons utiliser est CloudML.
-Ce service permet d'exposer des modèles déjà entraînés. On appelle cette phase le *serving**.
+Ce service permet d'exposer des modèles déjà entraînés. On appelle cette phase le **serving**.
 CloudML effectuera donc le serving, mais uniquement pour des modèles entraînés avec TensorFlow.
 
 La première étape est de sauvegarder le modèle dans un format supporté par CloudML.
