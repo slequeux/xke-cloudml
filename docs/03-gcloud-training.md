@@ -30,7 +30,7 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --region europe-west1 \
     --scale-tier basic-gpu \
     -- \
-    --num-epochs 3 \        
+    --num-epochs 3 \
     --steps-per-epoch 3 \
     --data-project $PROJECT_ID \
     --data-bucket $BUCKET \
