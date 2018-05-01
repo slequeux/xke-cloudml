@@ -45,7 +45,7 @@ Vous pouvez suivre l'état de votre job dans la console dans ML Engine -> Tâche
 L'entraînement du modèle dans le cloud a généré un fichier saved_model.pb dans GCS, dans le dossier ${OUTPUT_PATH}/modèle.
 Vous pouvez donc maintenant créer une nouvelle version du modèle dans CloudML.
 Afin de la tester, vous pouvez utiliser le script 
-```python 
+``` 
 predict/gcloud.py \
     --image data/fruits/apple/image_apple1.jpeg \
     --project_id $PROJECT_ID \
