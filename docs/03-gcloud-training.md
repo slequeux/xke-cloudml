@@ -5,7 +5,7 @@ Jean souhaiterait bénéficier de la puissance du cloud pour entrainer son modè
 ## Entraînement dans le Cloud
 Pour l'entrainement les données doivent être envoyées dans un bucket google cloud storage.
 ```
-gsutil -m rsync -r -J data/fruits gs://$BUCKET/$DATA_PATH
+gsutil -m rsync -r -J gs://sleq-ml-engine/data/raw/fruits gs://$BUCKET/$DATA_PATH
 ```
 
 On souhaite que le modèle entrainé soit stocké sur google storage dans le dossier model/my_model.
