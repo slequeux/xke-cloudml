@@ -27,7 +27,7 @@ Il sera nécessaire de disposer des éléments suivants sur Google Cloud
 Récupérer le code source de ce projet :
 
 ```bash
-git clone git@github.com:slequeux/xke-cloudml.git
+git clone git@github.com/slequeux/xke-cloudml.git
 ```
 
 L'ensemble des commandes seront maintenant exécutées dans le répertoire `xke-cloudml` qui vient d'être créé.
