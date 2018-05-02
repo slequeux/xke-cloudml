@@ -46,7 +46,7 @@ L'entraînement du modèle dans le cloud a généré un fichier saved_model.pb d
 Vous pouvez donc maintenant créer une nouvelle version du modèle dans CloudML.
 Afin de la tester, vous pouvez utiliser le script 
 ``` 
-predict/gcloud.py \
+python predict/gcloud.py \
     --image data/fruits/apple/image_apple1.jpeg \
     --project_id $PROJECT_ID \
     --model_name $MODEL_NAME \
